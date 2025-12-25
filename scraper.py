@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import time
+import json
 
 BASE_URL = "https://clothesmentor.com"
 COLLECTION = "/collections/all"
@@ -14,7 +15,7 @@ def scrape_collection():
     products = []
 
     # while True:
-    while page < 3:
+    while page < 10:
         url = f"{BASE_URL}{COLLECTION}?page={page}{SORT}"
         print(f"Scraping page {page} → {url}")
 
@@ -75,3 +76,7 @@ matches = [
 print("Matches:")
 for m in matches:
     print(m)
+
+# write matches to local file
+with open("scraper-results.json", "w") as json_file:
+    json.dump(matches, json_file, indent=4)
