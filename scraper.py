@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import json
+import re
+import unicodedata
 
 BASE_URL = "https://clothesmentor.com"
 COLLECTION = "/collections/all"
@@ -10,6 +12,28 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
 
+# pull brands from external file
+def load_brands(path="brands.json"):
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+# strip text down to lowercase letters 
+def normalize(text):
+    if not text:
+        return ""
+    text = unicodedata.normalize("NFKD", text)
+    text = text.encode("ascii", "ignore").decode("ascii")
+    return text.lower()
+
+# safely checks for match in brand names
+def brand_matches(brand, text):
+    brand_norm = normalize(brand)
+    text_norm = normalize(text)
+
+    pattern = re.escape(brand_norm)
+    return re.search(pattern, text_norm) is not None
+   
+# scrape each page of website in order
 def scrape_collection():
     page = 1
     products = []
@@ -25,8 +49,6 @@ def scrape_collection():
             break
 
         soup = BeautifulSoup(response.text, "lxml")
-
-        # print(soup)
 
         items = soup.select("div.grid-product, div.product-card, a.grid-product__link, a.product-card, li.grid__item")
         if not items:
@@ -44,13 +66,9 @@ def scrape_collection():
 
             title = link.get("title") or link.text.strip()
 
-            # vendor_tag = item.find(class_="grid-product__vendor") or item.find(class_="product-card__vendor")
-            # vendor = vendor_tag.text.strip() if vendor_tag else None
-
             products.append({
                 "title": title,
-                "url": product_url,
-                # "vendor": vendor
+                "url": product_url
             })
 
         page += 1
@@ -62,20 +80,26 @@ def scrape_collection():
 # --------- RUN SCRAPER ----------
 all_products = scrape_collection()
 print(f"\nTotal products scraped: {len(all_products)}")
-# print (all_products[1])
 
-target_brands = {"Ugg", "Imogene", "Sezane", "Bibi"}
 
-matches = [
-    p for p in all_products
-    # if any(b.lower() in (p["vendor"] or "").lower() or b.lower() in p["title"].lower()
-    #        for b in target_brands)
-    if any(b.lower() in p["title"].lower()for b in target_brands)
-]
+# get brands
+brands = load_brands()
 
-print("Matches:")
-for m in matches:
-    print(m)
+matches = []
+
+# check scraped products for brand matches
+for product in all_products:
+    product_title = f"{product.get('title', '')}"
+
+    for brand_obj in brands:
+        brand_name = brand_obj["brand"]
+
+        if brand_matches(brand_name, product_title):
+            matches.append({
+                **product,
+                "matched_brand": brand_name
+            })
+            break
 
 # write matches to local file
 with open("scraper-results.json", "w") as json_file:
