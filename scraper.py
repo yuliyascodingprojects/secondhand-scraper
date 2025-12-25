@@ -67,8 +67,9 @@ target_brands = {"Ugg", "Imogene", "Sezane", "Bibi"}
 
 matches = [
     p for p in all_products
-    if any(b.lower() in (p["vendor"] or "").lower() or b.lower() in p["title"].lower()
-           for b in target_brands)
+    # if any(b.lower() in (p["vendor"] or "").lower() or b.lower() in p["title"].lower()
+    #        for b in target_brands)
+    if any(b.lower() in p["title"].lower()for b in target_brands)
 ]
 
 print("Matches:")
