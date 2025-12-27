@@ -23,15 +23,39 @@ def normalize(text):
         return ""
     text = unicodedata.normalize("NFKD", text)
     text = text.encode("ascii", "ignore").decode("ascii")
+    #print("normalized " + text.lower())
     return text.lower()
 
 # safely checks for match in brand names
 def brand_matches(brand, text):
-    brand_norm = normalize(brand)
-    text_norm = normalize(text)
+    # brand_norm = normalize(brand)
+    # text_norm = normalize(text)
 
-    pattern = re.escape(brand_norm)
-    return re.search(pattern, text_norm) is not None
+    # pattern = re.escape(brand_norm)
+    # print(f"pattern: {pattern}")
+    # print(f"product brand: {text_norm}")
+    #print("does " + pattern + " = " + text_norm)
+    # return re.search(pattern, text_norm) is not None
+    return normalize(brand) == normalize(text)
+
+def get_brand_from_title(title):
+    match = re.search(r"By(.*?)In", title)
+    print(title)
+
+    if match:
+        extracted_match = match.group(1).strip()
+        print(f"Extracted: '{extracted_match}'")
+        return extracted_match
+    else:
+        other_match = re.search(r"By(.*?), Size", title)
+
+        if other_match:
+            extracted_match = other_match.group(1).strip()
+            print(f"Extracted: '{extracted_match}'")
+            return extracted_match
+        else:
+            print("No match found.")
+            return None
    
 # scrape each page of website in order
 def scrape_collection():
@@ -39,7 +63,7 @@ def scrape_collection():
     products = []
 
     # while True:
-    while page < 10:
+    while page < 100:
         url = f"{BASE_URL}{COLLECTION}?page={page}{SORT}"
         print(f"Scraping page {page} → {url}")
 
@@ -68,7 +92,8 @@ def scrape_collection():
 
             products.append({
                 "title": title,
-                "url": product_url
+                "url": product_url,
+                "brand": get_brand_from_title(title)
             })
 
         page += 1
@@ -89,12 +114,12 @@ matches = []
 
 # check scraped products for brand matches
 for product in all_products:
-    product_title = f"{product.get('title', '')}"
+    product_brand = f"{product.get('brand', '')}"
 
     for brand_obj in brands:
         brand_name = brand_obj["brand"]
 
-        if brand_matches(brand_name, product_title):
+        if brand_matches(brand_name, product_brand):
             matches.append({
                 **product,
                 "matched_brand": brand_name
