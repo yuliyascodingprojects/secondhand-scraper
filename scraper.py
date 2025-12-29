@@ -16,6 +16,10 @@ HEADERS = {
 def load_brands(path="brands.json"):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+    
+def load_products(path="recent_products.json"):
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 # strip text down to lowercase letters 
 def normalize(text):
@@ -23,39 +27,34 @@ def normalize(text):
         return ""
     text = unicodedata.normalize("NFKD", text)
     text = text.encode("ascii", "ignore").decode("ascii")
-    #print("normalized " + text.lower())
     return text.lower()
 
 # safely checks for match in brand names
 def brand_matches(brand, text):
-    # brand_norm = normalize(brand)
-    # text_norm = normalize(text)
-
-    # pattern = re.escape(brand_norm)
-    # print(f"pattern: {pattern}")
-    # print(f"product brand: {text_norm}")
-    #print("does " + pattern + " = " + text_norm)
-    # return re.search(pattern, text_norm) is not None
     return normalize(brand) == normalize(text)
 
 def get_brand_from_title(title):
-    match = re.search(r"By(.*?)In", title)
-    print(title)
+    case1 = re.search(r"By(.*?)In", title)
+    case2 = re.search(r"By(.*?), Size", title)
+    case3 = re.search(r"(?<=By\s).*", title)
+    # print(title)
 
-    if match:
-        extracted_match = match.group(1).strip()
-        print(f"Extracted: '{extracted_match}'")
+    if case1:
+        extracted_match = case1.group(1).strip()
+        # print(f"Extracted: '{extracted_match}'")
+        return extracted_match
+    elif case2:
+        extracted_match = case2.group(1).strip()
+        # print(f"Extracted: '{extracted_match}'")
+        return extracted_match
+    elif case3:
+        extracted_match = case3.group(0)
+        # print(f"Extracted: '{extracted_match}'")
         return extracted_match
     else:
-        other_match = re.search(r"By(.*?), Size", title)
-
-        if other_match:
-            extracted_match = other_match.group(1).strip()
-            print(f"Extracted: '{extracted_match}'")
-            return extracted_match
-        else:
-            print("No match found.")
-            return None
+        return None
+        
+recent_products = load_products()
    
 # scrape each page of website in order
 def scrape_collection():
@@ -63,7 +62,7 @@ def scrape_collection():
     products = []
 
     # while True:
-    while page < 100:
+    while page < 5:
         url = f"{BASE_URL}{COLLECTION}?page={page}{SORT}"
         print(f"Scraping page {page} → {url}")
 
@@ -88,6 +87,14 @@ def scrape_collection():
             if product_url.startswith("/"):
                 product_url = BASE_URL + product_url
 
+            #if any(prod.url == product_url for prod in recent_products):
+            # if product_url in recent_products.values():
+            #     break
+            # for prod in recent_products:
+            #     if prod["url"] == product_url:
+            #         print("Recent match found")
+            #         break
+
             title = link.get("title") or link.text.strip()
 
             products.append({
@@ -106,6 +113,11 @@ def scrape_collection():
 all_products = scrape_collection()
 print(f"\nTotal products scraped: {len(all_products)}")
 
+# write 20 most recent products to file
+first_20_products = all_products[:20]
+
+with open("recent_products.json", "w") as json_file:
+    json.dump(first_20_products, json_file, indent=4)
 
 # get brands
 brands = load_brands()
