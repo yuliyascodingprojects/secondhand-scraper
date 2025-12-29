@@ -16,7 +16,8 @@ HEADERS = {
 def load_brands(path="brands.json"):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
-    
+
+# pull in recently scraped urls 
 def load_products(path="recent_products.json"):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -33,23 +34,20 @@ def normalize(text):
 def brand_matches(brand, text):
     return normalize(brand) == normalize(text)
 
+# strip out brand name from the title
 def get_brand_from_title(title):
     case1 = re.search(r"By(.*?)In", title)
     case2 = re.search(r"By(.*?), Size", title)
     case3 = re.search(r"(?<=By\s).*", title)
-    # print(title)
 
     if case1:
         extracted_match = case1.group(1).strip()
-        # print(f"Extracted: '{extracted_match}'")
         return extracted_match
     elif case2:
         extracted_match = case2.group(1).strip()
-        # print(f"Extracted: '{extracted_match}'")
         return extracted_match
     elif case3:
         extracted_match = case3.group(0)
-        # print(f"Extracted: '{extracted_match}'")
         return extracted_match
     else:
         return None
@@ -115,7 +113,6 @@ print(f"\nTotal products scraped: {len(all_products)}")
 
 # write 20 most recent products to file
 first_20_products = all_products[:20]
-
 with open("recent_products.json", "w") as json_file:
     json.dump(first_20_products, json_file, indent=4)
 
