@@ -11,6 +11,7 @@ SORT = "&sort_by=created-descending"
 HEADERS = {
     "User-Agent": "Mozilla/5.0"
 }
+RECENTS = 30
 
 # pull brands from external file
 def load_brands(path="brands.json"):
@@ -21,6 +22,15 @@ def load_brands(path="brands.json"):
 def load_products(path="recent_products.json"):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+# load recently scraped urls into set 
+def load_scraped_urls(path="recent_products.json"):
+    try: 
+        with open(path, "r", encoding="utf-8") as f:
+            items = json.load(f)
+            return {item["url"] for item in items}
+    except FileNotFoundError:
+        return set()
 
 # strip text down to lowercase letters 
 def normalize(text):
@@ -51,8 +61,9 @@ def get_brand_from_title(title):
         return extracted_match
     else:
         return None
-        
-recent_products = load_products()
+
+# load in already scraped urls
+scraped_urls = load_scraped_urls()
    
 # scrape each page of website in order
 def scrape_collection():
@@ -60,7 +71,7 @@ def scrape_collection():
     products = []
 
     # while True:
-    while page < 5:
+    while page < 4:
         url = f"{BASE_URL}{COLLECTION}?page={page}{SORT}"
         print(f"Scraping page {page} → {url}")
 
@@ -84,6 +95,10 @@ def scrape_collection():
             product_url = link.get("href")
             if product_url.startswith("/"):
                 product_url = BASE_URL + product_url
+
+            if product_url in scraped_urls:
+                print("stopping early")
+                return products
 
             #if any(prod.url == product_url for prod in recent_products):
             # if product_url in recent_products.values():
@@ -111,10 +126,25 @@ def scrape_collection():
 all_products = scrape_collection()
 print(f"\nTotal products scraped: {len(all_products)}")
 
-# write 20 most recent products to file
-first_20_products = all_products[:20]
-with open("recent_products.json", "w") as json_file:
-    json.dump(first_20_products, json_file, indent=4)
+# write 20 most recent products to file 
+# if < 20 recent products, make up difference with last recent products
+if len(all_products) >= RECENTS:
+    first_20_products = all_products[:RECENTS]
+    with open("recent_products.json", "w") as json_file:
+        json.dump(first_20_products, json_file, indent=4)
+else:
+    recent_products = load_products()
+    # sprint(f"recent products {recent_products}")
+    first_20_products = all_products
+    i = 0
+    print (f"while loop will run for {RECENTS - len(first_20_products)}")
+    while i < (RECENTS - len(first_20_products)):
+        print(recent_products[i])
+        first_20_products.append(recent_products[i])
+        print(f"i = {i}")
+        i+=1
+    with open("recent_products.json", "w") as json_file:
+        json.dump(first_20_products, json_file, indent=4)        
 
 # get brands
 brands = load_brands()
