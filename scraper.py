@@ -100,14 +100,6 @@ def scrape_collection():
                 print("stopping early")
                 return products
 
-            #if any(prod.url == product_url for prod in recent_products):
-            # if product_url in recent_products.values():
-            #     break
-            # for prod in recent_products:
-            #     if prod["url"] == product_url:
-            #         print("Recent match found")
-            #         break
-
             title = link.get("title") or link.text.strip()
 
             products.append({
@@ -126,22 +118,20 @@ def scrape_collection():
 all_products = scrape_collection()
 print(f"\nTotal products scraped: {len(all_products)}")
 
-# write 20 most recent products to file 
-# if < 20 recent products, make up difference with last recent products
+# write newly scraped products to recent products file 
+# if < 30 recent products, make up difference with previous recent products
 if len(all_products) >= RECENTS:
     first_20_products = all_products[:RECENTS]
     with open("recent_products.json", "w") as json_file:
         json.dump(first_20_products, json_file, indent=4)
 else:
     recent_products = load_products()
-    # sprint(f"recent products {recent_products}")
     first_20_products = all_products
     i = 0
-    print (f"while loop will run for {RECENTS - len(first_20_products)}")
-    while i < (RECENTS - len(first_20_products)):
-        print(recent_products[i])
+    difference = RECENTS - len(first_20_products)
+
+    while i < difference:
         first_20_products.append(recent_products[i])
-        print(f"i = {i}")
         i+=1
     with open("recent_products.json", "w") as json_file:
         json.dump(first_20_products, json_file, indent=4)        
